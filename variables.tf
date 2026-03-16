@@ -187,13 +187,19 @@ variable "network_acls" {
   type = object({
     default_action = string
     ip_rules       = optional(list(string), [])
-    bypass         = optional(string) #  Possible values: None, AzureServices
+    bypass         = optional(string)
     virtual_network_rules = optional(list(object({
       subnet_id                            = string
       ignore_missing_vnet_service_endpoint = optional(bool, false)
     })), [])
   })
-  description = "Network ACL configuration for the Cognitive Account. bypass can only be set when kind is OpenAI, AIServices, or TextAnalytics. Possible values: None, AzureServices."
+  description = <<EOT
+Network ACL configuration for the Cognitive Account.
+- default_action: Allow or Deny
+- bypass: None or AzureServices (only valid for OpenAI, AIServices, TextAnalytics)
+- ip_rules: List of IPs/ranges. Single IPs must be plain (e.g. "203.0.113.10") — /32 notation is NOT supported by Cognitive Services. Ranges use CIDR (e.g. "198.51.100.0/24").
+- virtual_network_rules: List of subnet IDs. Subnet must have Microsoft.CognitiveServices service endpoint enabled.
+EOT
   default     = null
 }
 

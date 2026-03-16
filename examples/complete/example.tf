@@ -159,8 +159,8 @@ module "openai_cognitive_service" {
     default_action = "Deny"
     bypass         = "AzureServices"
     ip_rules = [
-      "203.0.113.10", # single IP must have /32
-      "198.51.100.0", # range is fine with /24
+      "203.0.113.10",    # single IP must have /32
+      "198.51.100.0/24", # range is fine with /24
     ]
     virtual_network_rules = [
       {
