@@ -93,7 +93,7 @@ resource "azurerm_cognitive_account" "main" {
 ## User Assigned Identity
 ##-----------------------------------------------------------------------------
 resource "azurerm_user_assigned_identity" "main" {
-  count               = var.enabled ? 1 : 0
+  count               = var.enabled && var.enable_customer_managed_key ? 1 : 0
   resource_group_name = var.resource_group_name
   location            = var.location
   name                = var.resource_position_prefix ? format("mid-%s", local.name) : format("%s-mid", local.name)
@@ -109,19 +109,39 @@ resource "azurerm_role_assignment" "identity_assigned" {
   role_definition_name = "Key Vault Crypto Service Encryption User"
 }
 
+resource "azurerm_role_assignment" "rbac_keyvault_crypto_officer" {
+  for_each             = toset(var.enabled && var.enable_customer_managed_key ? var.admin_objects_ids : [])
+  scope                = var.key_vault_id
+  role_definition_name = "Key Vault Crypto Officer"
+  principal_id         = each.value
+}
+
 ##-----------------------------------------------------------------------------
 ## Key Vault Key
 ##-----------------------------------------------------------------------------
 resource "azurerm_key_vault_key" "main" {
-  depends_on   = [azurerm_role_assignment.identity_assigned]
-  count        = var.enabled && var.enable_customer_managed_key ? 1 : 0
-  name         = var.resource_position_prefix ? format("kvk-%s", local.name) : format("%s-kvk", local.name)
-  key_vault_id = var.key_vault_id
-  key_type     = var.key_type
-  key_size     = var.key_size
-  key_opts     = var.key_opts
-  tags         = module.labels.tags
+  depends_on      = [azurerm_role_assignment.identity_assigned]
+  count           = var.enabled && var.enable_customer_managed_key ? 1 : 0
+  name            = var.resource_position_prefix ? format("kvk-%s", local.name) : format("%s-kvk", local.name)
+  key_vault_id    = var.key_vault_id
+  key_type        = var.key_type
+  key_size        = var.key_size
+  key_opts        = var.key_opts
+  expiration_date = var.key_expiration_date
+  tags            = module.labels.tags
+
+  dynamic "rotation_policy" {
+    for_each = var.rotation_policy_config.enabled ? [1] : []
+    content {
+      automatic {
+        time_before_expiry = var.rotation_policy_config.time_before_expiry
+      }
+      expire_after         = var.rotation_policy_config.expire_after
+      notify_before_expiry = var.rotation_policy_config.notify_before_expiry
+    }
+  }
 }
+
 
 ##-----------------------------------------------------------------------------
 ## Cognitive Deployment
@@ -218,6 +238,41 @@ resource "azurerm_private_endpoint" "main" {
       name                 = var.resource_position_prefix ? format("dzg-%s", local.name) : format("%s-dzg", local.name)
       private_dns_zone_ids = var.private_dns_zone_ids
     }
+  }
+
+  depends_on = [azurerm_cognitive_account.main]
+}
+
+##-----------------------------------------------------------------------------
+## Diagnostic Settings — Azure Monitor for Cognitive Account
+##-----------------------------------------------------------------------------
+resource "azurerm_monitor_diagnostic_setting" "main" {
+  count                          = var.enabled && var.enable_diagnostic ? 1 : 0
+  name                           = var.resource_position_prefix ? format("diag-%s", local.name) : format("%s-diag", local.name)
+  target_resource_id             = azurerm_cognitive_account.main[0].id
+  log_analytics_workspace_id     = var.log_analytics_workspace_id
+  storage_account_id             = var.storage_account_id
+  eventhub_name                  = var.eventhub_name
+  eventhub_authorization_rule_id = var.eventhub_authorization_rule_id
+  log_analytics_destination_type = var.log_analytics_destination_type
+
+  dynamic "enabled_log" {
+    for_each = length(var.log_category) > 0 ? var.log_category : var.log_category_group
+    content {
+      category       = length(var.log_category) > 0 ? enabled_log.value : null
+      category_group = length(var.log_category) > 0 ? null : enabled_log.value
+    }
+  }
+
+  dynamic "enabled_metric" {
+    for_each = var.metric_enabled ? ["AllMetrics"] : []
+    content {
+      category = enabled_metric.value
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [log_analytics_destination_type]
   }
 
   depends_on = [azurerm_cognitive_account.main]

@@ -48,3 +48,8 @@ output "rai_blocklist_id" {
   description = "The ID of the RAI Blocklist"
   value       = try(azurerm_cognitive_account_rai_blocklist.main[0].id, null)
 }
+
+output "diagnostic_setting_id" {
+  description = "The ID of the Diagnostic Setting"
+  value       = try(azurerm_monitor_diagnostic_setting.main[0].id, null)
+}

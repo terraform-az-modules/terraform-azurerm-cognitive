@@ -183,8 +183,6 @@ variable "project_management_enabled" {
   default     = false
 }
 
-
-
 variable "network_acls" {
   type = object({
     default_action = string
@@ -208,15 +206,6 @@ variable "network_injection" {
   default     = null
 }
 
-variable "customer_managed_key" {
-  type = object({
-    key_vault_key_id   = string
-    identity_client_id = optional(string)
-  })
-  description = "Customer managed key configuration for encryption. When project_management_enabled is true, removing this block forces a new resource to be created."
-  default     = null
-}
-
 variable "storage" {
   type = list(object({
     storage_account_id = string
@@ -229,16 +218,10 @@ variable "storage" {
 ##-----------------------------------------------------------------------------
 ## User Assigned Identity Variables
 ##-----------------------------------------------------------------------------
-variable "enable_user_assigned_identity" {
-  type        = bool
-  description = "Enable User Assigned Identity for Cognitive Account."
-  default     = false
-}
-
-variable "user_assigned_identity_name" {
-  type        = string
-  description = "The name of the User Assigned Identity."
-  default     = "example-identity"
+variable "admin_objects_ids" {
+  type        = list(string)
+  description = "List of object IDs (users, service principals, groups) to assign Key Vault Crypto Officer role."
+  default     = []
 }
 
 ##-----------------------------------------------------------------------------
@@ -283,12 +266,6 @@ variable "enable_project" {
   default     = false
 }
 
-variable "project_name" {
-  type        = string
-  description = "The name of the project."
-  default     = "example-project"
-}
-
 variable "project_location" {
   type        = string
   description = "The location for the project. Defaults to cognitive account location."
@@ -330,12 +307,6 @@ variable "enable_rai_blocklist" {
   default     = false
 }
 
-variable "rai_blocklist_name" {
-  type        = string
-  description = "The name of the RAI Blocklist."
-  default     = "example-crb"
-}
-
 variable "rai_blocklist_description" {
   type        = string
   description = "Description of the RAI Blocklist."
@@ -349,12 +320,6 @@ variable "enable_rai_policy" {
   type        = bool
   description = "Enable RAI Policy."
   default     = false
-}
-
-variable "rai_policy_name" {
-  type        = string
-  description = "The name of the RAI Policy."
-  default     = "example-rai-policy"
 }
 
 variable "rai_policy_base_policy_name" {
@@ -465,4 +430,104 @@ variable "private_dns_zone_ids" {
   type        = list(string)
   description = "List of Private DNS Zone IDs to associate with the private endpoint. Typically: privatelink.cognitiveservices.azure.com or privatelink.openai.azure.com"
   default     = null
+}
+
+##----------------------------------------------------------------------------- 
+## CMK Variables
+##-----------------------------------------------------------------------------
+variable "key_expiration_date" {
+  type        = string
+  description = "Expiration UTC datetime for the Key Vault key. Format: 2028-12-31T23:59:59Z. Set null for no expiry."
+  default     = null
+}
+
+variable "rotation_policy_config" {
+  type = object({
+    enabled              = bool
+    time_before_expiry   = optional(string, "P30D")
+    expire_after         = optional(string, "P90D")
+    notify_before_expiry = optional(string, "P29D")
+  })
+  description = <<EOT
+Key rotation policy configuration.
+- expire_after: Key lifetime in ISO 8601 (P1Y = 1 year, P90D = 90 days)
+- time_before_expiry: Auto-rotate this long before expiry (P30D)
+- notify_before_expiry: Must be less than time_before_expiry (P29D)
+EOT
+  default = {
+    enabled              = false
+    time_before_expiry   = "P30D"
+    expire_after         = "P90D"
+    notify_before_expiry = "P29D"
+  }
+}
+
+##-----------------------------------------------------------------------------
+## Diagnostics Variables
+##-----------------------------------------------------------------------------
+##-----------------------------------------------------------------------------
+## Diagnostic Settings Variables
+##-----------------------------------------------------------------------------
+variable "enable_diagnostic" {
+  type        = bool
+  default     = false
+  description = "Flag to control creation of diagnostic settings for the Cognitive Account."
+}
+
+variable "log_analytics_workspace_id" {
+  type        = string
+  default     = null
+  description = "Log Analytics Workspace ID where logs should be sent."
+}
+
+variable "log_analytics_destination_type" {
+  type        = string
+  default     = "AzureDiagnostics"
+  description = "Destination type for Log Analytics. Possible values: AzureDiagnostics, Dedicated. Dedicated sends logs to resource-specific tables instead of the legacy AzureDiagnostics table."
+  validation {
+    condition     = contains(["AzureDiagnostics", "Dedicated"], var.log_analytics_destination_type)
+    error_message = "Valid values are AzureDiagnostics or Dedicated."
+  }
+}
+
+variable "metric_enabled" {
+  type        = bool
+  default     = true
+  description = "Whether AllMetrics should be enabled in diagnostic settings."
+}
+
+variable "log_category" {
+  type        = list(string)
+  default     = []
+  description = <<EOT
+Specific log categories to enable. When set, takes priority over log_category_group.
+Accepted values for Cognitive/AIServices:
+- Audit
+- RequestResponse
+- Trace
+EOT
+}
+
+variable "log_category_group" {
+  type        = list(string)
+  default     = ["audit"]
+  description = "Log category group for diagnostic settings. Used when log_category is empty. Common values: audit, allLogs."
+}
+
+variable "storage_account_id" {
+  type        = string
+  default     = null
+  description = "Storage Account ID to archive diagnostic logs."
+}
+
+variable "eventhub_name" {
+  type        = string
+  default     = null
+  description = "Event Hub name to stream diagnostic logs to."
+}
+
+variable "eventhub_authorization_rule_id" {
+  type        = string
+  default     = null
+  description = "Event Hub authorization rule ID for streaming diagnostic logs."
 }
