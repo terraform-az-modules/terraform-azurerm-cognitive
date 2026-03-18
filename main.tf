@@ -120,7 +120,7 @@ resource "azurerm_key_vault_key" "main" {
 ##-----------------------------------------------------------------------------
 resource "azurerm_cognitive_deployment" "main" {
   for_each               = var.enabled ? var.deployments : {}
-  name                   = var.resource_position_prefix ? format("cd-%s-%s", each.key, local.name) : format("%s-%s-cd", local.name, each.key)
+  name                   = each.key
   cognitive_account_id   = azurerm_cognitive_account.main[0].id
   rai_policy_name        = each.value.rai_policy_name
   version_upgrade_option = each.value.version_upgrade_option
@@ -143,7 +143,7 @@ resource "azurerm_cognitive_deployment" "main" {
 ##-----------------------------------------------------------------------------
 resource "azurerm_cognitive_account_project" "main" {
   for_each             = var.enabled ? var.projects : {}
-  name                 = var.resource_position_prefix ? format("proj-%s-%s", each.key, local.name) : format("%s-%s-proj", local.name, each.key)
+  name                 = each.key
   cognitive_account_id = azurerm_cognitive_account.main[0].id
   location             = coalesce(each.value.location, var.location)
   description          = each.value.description
