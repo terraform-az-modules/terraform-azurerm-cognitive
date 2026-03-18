@@ -138,7 +138,6 @@ module "openai_cognitive_service" {
   ##---------------------------------------------------------------------------
   deployments = {
     "gpt4o-mini" = {
-      rai_policy_name        = "Microsoft.DefaultV2"
       version_upgrade_option = "OnceCurrentVersionExpired"
       model = {
         format  = "OpenAI"
@@ -151,7 +150,6 @@ module "openai_cognitive_service" {
       }
     }
     "gpt5-mini" = {
-      rai_policy_name        = "Microsoft.DefaultV2"
       version_upgrade_option = "OnceCurrentVersionExpired"
       model = {
         format  = "OpenAI"

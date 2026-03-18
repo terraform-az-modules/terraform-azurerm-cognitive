@@ -122,8 +122,15 @@ resource "azurerm_cognitive_deployment" "main" {
   for_each               = var.enabled ? var.deployments : {}
   name                   = each.key
   cognitive_account_id   = azurerm_cognitive_account.main[0].id
-  rai_policy_name        = each.value.rai_policy_name
   version_upgrade_option = each.value.version_upgrade_option
+
+  rai_policy_name = try(
+    coalesce(
+      each.value.rai_policy_name,
+      try(azurerm_cognitive_account_rai_policy.main[0].name, null)
+    ),
+    null
+  )
 
   model {
     format  = each.value.model.format
@@ -135,7 +142,16 @@ resource "azurerm_cognitive_deployment" "main" {
     name     = each.value.sku.name
     capacity = each.value.sku.capacity
   }
-  depends_on = [azurerm_cognitive_account.main]
+
+  lifecycle {
+    # ignore_changes = [rai_policy_name]
+  }
+
+  depends_on = [
+    azurerm_cognitive_account.main,
+    azurerm_cognitive_account_rai_policy.main
+  ]
+
 }
 
 ##-----------------------------------------------------------------------------
