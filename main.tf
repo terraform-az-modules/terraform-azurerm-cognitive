@@ -90,39 +90,12 @@ resource "azurerm_cognitive_account" "main" {
 }
 
 ##-----------------------------------------------------------------------------
-## User Assigned Identity
-##-----------------------------------------------------------------------------
-resource "azurerm_user_assigned_identity" "main" {
-  count               = var.enabled && var.enable_customer_managed_key ? 1 : 0
-  resource_group_name = var.resource_group_name
-  location            = var.location
-  name                = var.resource_position_prefix ? format("mid-%s", local.name) : format("%s-mid", local.name)
-  tags                = module.labels.tags
-}
-
-resource "azurerm_role_assignment" "identity_assigned" {
-  # provider             = azurerm.main_sub
-  depends_on           = [azurerm_user_assigned_identity.main]
-  count                = var.enabled && var.enable_customer_managed_key ? 1 : 0
-  principal_id         = azurerm_user_assigned_identity.main[0].principal_id
-  scope                = var.key_vault_id
-  role_definition_name = "Key Vault Crypto Service Encryption User"
-}
-
-resource "azurerm_role_assignment" "rbac_keyvault_crypto_officer" {
-  for_each             = toset(var.enabled && var.enable_customer_managed_key ? var.admin_objects_ids : [])
-  scope                = var.key_vault_id
-  role_definition_name = "Key Vault Crypto Officer"
-  principal_id         = each.value
-}
-
-##-----------------------------------------------------------------------------
 ## Key Vault Key
 ##-----------------------------------------------------------------------------
 resource "azurerm_key_vault_key" "main" {
   depends_on      = [azurerm_role_assignment.identity_assigned]
   count           = var.enabled && var.enable_customer_managed_key ? 1 : 0
-  name            = var.resource_position_prefix ? format("kvk-%s", local.name) : format("%s-kvk", local.name)
+  name            = var.resource_position_prefix ? format("cmk-key-foundry-%s", local.name) : format("%s-cmk-key-foundry", local.name)
   key_vault_id    = var.key_vault_id
   key_type        = var.key_type
   key_size        = var.key_size
@@ -142,45 +115,46 @@ resource "azurerm_key_vault_key" "main" {
   }
 }
 
-
 ##-----------------------------------------------------------------------------
-## Cognitive Deployment
+## Cognitive Deployments — supports multiple models
 ##-----------------------------------------------------------------------------
 resource "azurerm_cognitive_deployment" "main" {
-  count                  = var.enabled && var.enable_deployment ? 1 : 0
-  name                   = var.resource_position_prefix ? format("cd-%s", local.name) : format("%s-cd", local.name)
+  for_each               = var.enabled ? var.deployments : {}
+  name                   = var.resource_position_prefix ? format("cd-%s-%s", each.key, local.name) : format("%s-%s-cd", local.name, each.key)
   cognitive_account_id   = azurerm_cognitive_account.main[0].id
-  rai_policy_name        = var.deployment_rai_policy_name
-  version_upgrade_option = var.deployment_version_upgrade_option
+  rai_policy_name        = each.value.rai_policy_name
+  version_upgrade_option = each.value.version_upgrade_option
 
   model {
-    format  = var.deployment_model.format
-    name    = var.deployment_model.name
-    version = var.deployment_model.version
+    format  = each.value.model.format
+    name    = each.value.model.name
+    version = each.value.model.version
   }
 
   sku {
-    name     = var.deployment_sku.name
-    capacity = var.deployment_sku.capacity
+    name     = each.value.sku.name
+    capacity = each.value.sku.capacity
   }
+  depends_on = [azurerm_cognitive_account.main]
 }
 
 ##-----------------------------------------------------------------------------
-## Cognitive Project
+## Cognitive Projects — supports multiple projects
 ##-----------------------------------------------------------------------------
 resource "azurerm_cognitive_account_project" "main" {
-  count                = var.enabled && var.enable_project ? 1 : 0
-  name                 = var.resource_position_prefix ? format("proj-%s", local.name) : format("%s-proj", local.name)
+  for_each             = var.enabled ? var.projects : {}
+  name                 = var.resource_position_prefix ? format("proj-%s-%s", each.key, local.name) : format("%s-%s-proj", local.name, each.key)
   cognitive_account_id = azurerm_cognitive_account.main[0].id
-  location             = coalesce(var.project_location, var.location)
-  description          = var.project_description
-  display_name         = var.project_display_name
-  tags                 = merge(module.labels.tags, var.project_tags)
+  location             = coalesce(each.value.location, var.location)
+  description          = each.value.description
+  display_name         = each.value.display_name
+  tags                 = merge(module.labels.tags, each.value.tags)
 
   identity {
-    type         = var.project_identity != null ? var.project_identity.type : "SystemAssigned"
-    identity_ids = try(length(var.project_identity.identity_ids) > 0 ? var.project_identity.identity_ids : null, null)
+    type         = each.value.identity != null ? each.value.identity.type : "SystemAssigned"
+    identity_ids = try(length(each.value.identity.identity_ids) > 0 ? each.value.identity.identity_ids : null, null)
   }
+  depends_on = [azurerm_cognitive_account.main]
 }
 
 ##-----------------------------------------------------------------------------

@@ -62,7 +62,7 @@ module "subnet" {
 # ------------------------------------------------------------------------------
 module "vault" {
   source                        = "terraform-az-modules/key-vault/azurerm"
-  version                       = "1.0.1"
+  version                       = "1.1.0"
   name                          = "core4"
   environment                   = "dev"
   label_order                   = ["name", "environment", "location"]
@@ -133,23 +133,56 @@ module "openai_cognitive_service" {
   enable_rai_policy          = false
   enable_rai_blocklist       = false
 
-  # Foundry Project — creates workspace in ai.azure.com
-  enable_project       = true # ← add this for full Foundry
-  project_display_name = "My AI Project"
-  project_description  = "GPT-4o mini workload"
-
-  enable_deployment          = true
-  deployment_rai_policy_name = "Microsoft.DefaultV2"
-
-  deployment_model = {
-    format  = "OpenAI"
-    name    = "gpt-4o-mini"
-    version = "2024-07-18"
+  ##---------------------------------------------------------------------------
+  ## Multiple Model Deployments
+  ##---------------------------------------------------------------------------
+  deployments = {
+    "gpt4o-mini" = {
+      rai_policy_name        = "Microsoft.DefaultV2"
+      version_upgrade_option = "OnceCurrentVersionExpired"
+      model = {
+        format  = "OpenAI"
+        name    = "gpt-4o-mini"
+        version = "2024-07-18"
+      }
+      sku = {
+        name     = "GlobalStandard"
+        capacity = 10
+      }
+    }
+    "gpt5-mini" = {
+      rai_policy_name        = "Microsoft.DefaultV2"
+      version_upgrade_option = "OnceCurrentVersionExpired"
+      model = {
+        format  = "OpenAI"
+        name    = "gpt-5-mini" # ← model name
+        version = "2025-08-07" # ← GA version
+      }
+      sku = {
+        name     = "GlobalStandard"
+        capacity = 10
+      }
+    }
   }
 
-  deployment_sku = {
-    name     = "GlobalStandard"
-    capacity = 1
+  ##---------------------------------------------------------------------------
+  ## Multiple Foundry Projects
+  ##---------------------------------------------------------------------------
+  projects = {
+    "mlops" = {
+      display_name = "MLOps Project"
+      description  = "CI/CD for AI models"
+      tags         = { "team" = "platform" }
+    }
+    "chatbot" = {
+      display_name = "Chatbot Project"
+      description  = "Customer-facing GPT-4o chatbot"
+      tags         = { "team" = "product" }
+      identity = {
+        type         = "SystemAssigned"
+        identity_ids = []
+      }
+    }
   }
 
   ##---------------------------------------------------------------------------
@@ -181,7 +214,6 @@ module "openai_cognitive_service" {
   ## Cmk  
   ##---------------------------------------------------------------------------
   enable_customer_managed_key = true
-  admin_objects_ids           = [data.azurerm_client_config.current_client_config.object_id] # set when enable_customer_managed_key = true
   key_vault_id                = module.vault.id
 
   ##---------------------------------------------------------------------------

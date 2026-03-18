@@ -23,21 +23,14 @@ output "cognitive_account_secondary_access_key" {
   sensitive   = true
 }
 
-# NEW
 output "private_endpoint_id" {
   description = "The ID of the Private Endpoint"
   value       = module.openai_cognitive_service.private_endpoint_id
 }
 
-# NEW
 output "private_endpoint_ip" {
   description = "The private IP address of the Private Endpoint NIC"
   value       = module.openai_cognitive_service.private_endpoint_ip
-}
-
-output "project_id" {
-  description = "The ID of the Cognitive Account Project"
-  value       = module.openai_cognitive_service.project_id
 }
 
 output "rai_blocklist_id" {

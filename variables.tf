@@ -222,12 +222,53 @@ variable "storage" {
 }
 
 ##-----------------------------------------------------------------------------
-## User Assigned Identity Variables
+## Deployments Map
 ##-----------------------------------------------------------------------------
-variable "admin_objects_ids" {
-  type        = list(string)
-  description = "List of object IDs (users, service principals, groups) to assign Key Vault Crypto Officer role."
-  default     = []
+variable "deployments" {
+  type = map(object({
+    rai_policy_name        = optional(string, null)
+    version_upgrade_option = optional(string, null)
+    model = object({
+      format  = string
+      name    = string
+      version = string
+    })
+    sku = object({
+      name     = string
+      capacity = optional(number, 1)
+    })
+  }))
+  description = <<EOT
+Map of model deployments. Key is used as the deployment identifier in the resource name.
+Each deployment requires a model (format, name, version) and sku (name, capacity).
+- rai_policy_name: Optional RAI policy. Defaults to Microsoft.DefaultV2 if null.
+- version_upgrade_option: OnceNewDefaultVersionAvailable, OnceCurrentVersionExpired, NoAutoUpgrade.
+- sku.name: GlobalStandard (recommended), Standard (regional, retiring), ProvisionedManaged.
+- sku.capacity: Tokens per minute in thousands (1 = 1K TPM).
+EOT
+  default     = {}
+}
+
+##-----------------------------------------------------------------------------
+## Projects Map
+##-----------------------------------------------------------------------------
+variable "projects" {
+  type = map(object({
+    display_name = string
+    description  = optional(string, "")
+    location     = optional(string, null)
+    tags         = optional(map(string), {})
+    identity = optional(object({
+      type         = string
+      identity_ids = optional(list(string), [])
+    }), null)
+  }))
+  description = <<EOT
+Map of Foundry projects. Key is used as the project identifier in the resource name.
+Each project requires a display_name. Identity defaults to SystemAssigned when not set.
+project_management_enabled must be true on the cognitive account for projects to work.
+EOT
+  default     = {}
 }
 
 ##-----------------------------------------------------------------------------
@@ -263,47 +304,6 @@ variable "key_opts" {
   default     = ["decrypt", "encrypt", "sign", "unwrapKey", "verify", "wrapKey"]
 }
 
-##-----------------------------------------------------------------------------
-## Project Variables
-##-----------------------------------------------------------------------------
-variable "enable_project" {
-  type        = bool
-  description = "Enable Cognitive Account Project."
-  default     = false
-}
-
-variable "project_location" {
-  type        = string
-  description = "The location for the project. Defaults to cognitive account location."
-  default     = null
-}
-
-variable "project_description" {
-  type        = string
-  description = "Description of the project."
-  default     = "Example cognitive services project"
-}
-
-variable "project_display_name" {
-  type        = string
-  description = "Display name of the project."
-  default     = "Example Project"
-}
-
-variable "project_tags" {
-  type        = map(string)
-  description = "Tags for the project."
-  default     = {}
-}
-
-variable "project_identity" {
-  type = object({
-    type         = string
-    identity_ids = optional(list(string), [])
-  })
-  description = "Identity configuration for the project. Defaults to SystemAssigned. Type: SystemAssigned, UserAssigned, or SystemAssigned, UserAssigned."
-  default     = null
-}
 ##-----------------------------------------------------------------------------
 ## RAI Blocklist Variables
 ##-----------------------------------------------------------------------------
@@ -362,59 +362,6 @@ variable "rai_policy_content_filters" {
       source             = "Prompt"
     }
   ]
-}
-
-##-----------------------------------------------------------------------------
-## Deployment Variables
-##-----------------------------------------------------------------------------
-variable "enable_deployment" {
-  type        = bool
-  description = "Enable Cognitive Deployment."
-  default     = false
-}
-
-variable "deployment_rai_policy_name" {
-  type        = string
-  description = "The RAI policy name for the deployment."
-  default     = null
-}
-
-variable "deployment_version_upgrade_option" {
-  type        = string
-  description = "Version upgrade option. Values: OnceNewDefaultVersionAvailable, OnceCurrentVersionExpired, NoAutoUpgrade."
-  default     = null
-}
-
-variable "deployment_model" {
-  type = object({
-    format  = string
-    name    = string
-    version = string
-  })
-  description = "Model configuration for deployment. Format must be OpenAI. Name examples: gpt-35-turbo, gpt-4, text-embedding-ada-002."
-  default = {
-    format  = "OpenAI"
-    name    = "gpt-4o-mini"
-    version = "2024-07-18"
-  }
-}
-
-variable "deployment_sku" {
-  type = object({
-    name     = string
-    tier     = optional(string)
-    size     = optional(string)
-    family   = optional(string)
-    capacity = optional(number)
-  })
-  description = "SKU configuration for deployment. Name is typically 'Standard'. Capacity is in thousands of tokens per minute (TPM). Since API version 2023-05-01, sku is used instead of scale."
-  default = {
-    name     = "GlobalStandard"
-    tier     = null
-    size     = null
-    family   = null
-    capacity = 1
-  }
 }
 
 ##-----------------------------------------------------------------------------

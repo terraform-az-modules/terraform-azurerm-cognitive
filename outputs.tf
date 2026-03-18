@@ -33,12 +33,6 @@ output "private_endpoint_ip" {
   value       = try(azurerm_private_endpoint.main[0].private_service_connection[0].private_ip_address, null)
 }
 
-# Renamed: was cognitive_account_project_id
-output "project_id" {
-  description = "The ID of the Cognitive Account Project"
-  value       = try(azurerm_cognitive_account_project.main[0].id, null)
-}
-
 output "rai_policy_id" {
   description = "The ID of the RAI Policy"
   value       = try(azurerm_cognitive_account_rai_policy.main[0].id, null)
@@ -52,4 +46,19 @@ output "rai_blocklist_id" {
 output "diagnostic_setting_id" {
   description = "The ID of the Diagnostic Setting"
   value       = try(azurerm_monitor_diagnostic_setting.main[0].id, null)
+}
+
+output "deployment_ids" {
+  description = "Map of deployment key to deployment resource ID"
+  value       = { for k, v in azurerm_cognitive_deployment.main : k => v.id }
+}
+
+output "deployment_names" {
+  description = "Map of deployment key to actual deployment name in Azure"
+  value       = { for k, v in azurerm_cognitive_deployment.main : k => v.name }
+}
+
+output "project_ids" {
+  description = "Map of project key to project resource ID"
+  value       = { for k, v in azurerm_cognitive_account_project.main : k => v.id }
 }
