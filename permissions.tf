@@ -5,7 +5,7 @@ resource "azurerm_user_assigned_identity" "main" {
   count               = var.enabled && var.enable_customer_managed_key ? 1 : 0
   resource_group_name = var.resource_group_name
   location            = var.location
-  name                = var.resource_position_prefix ? format("foundry-mid-%s", local.name) : format("%s-foundry-mid", local.name)
+  name                = var.resource_position_prefix ? format("mid-foundry-%s", local.name) : format("%s-foundry-mid", local.name)
   tags                = module.labels.tags
 }
 

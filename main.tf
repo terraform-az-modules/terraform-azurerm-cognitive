@@ -57,7 +57,7 @@ resource "azurerm_cognitive_account" "main" {
     }
   }
   identity {
-    type         = var.enable_customer_managed_key ? "UserAssigned" : "SystemAssigned"
+    type         = var.enable_customer_managed_key ? "SystemAssigned, UserAssigned" : "SystemAssigned"
     identity_ids = var.enable_customer_managed_key ? [azurerm_user_assigned_identity.main[0].id] : null
   }
 
@@ -262,7 +262,7 @@ resource "azurerm_monitor_diagnostic_setting" "main" {
   }
 
   lifecycle {
-    ignore_changes = [log_analytics_destination_type]
+    ignore_changes = []
   }
 
   depends_on = [azurerm_cognitive_account.main]

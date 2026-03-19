@@ -348,7 +348,7 @@ variable "rai_policy_content_filters" {
   type = list(object({
     name               = string
     filter_enabled     = bool
-    block_enabled      = bool # was blocking_enabled — fix this
+    block_enabled      = bool
     severity_threshold = string
     source             = string
   }))
@@ -415,9 +415,6 @@ EOT
   }
 }
 
-##-----------------------------------------------------------------------------
-## Diagnostics Variables
-##-----------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------
 ## Diagnostic Settings Variables
 ##-----------------------------------------------------------------------------
