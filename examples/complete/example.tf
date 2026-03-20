@@ -209,7 +209,7 @@ module "openai_cognitive_service" {
   private_dns_zone_ids       = [module.private_dns.private_dns_zone_ids["azure_ai_services"]]
 
   ##---------------------------------------------------------------------------
-  ## Cmk  
+  ## Cmk
   ##---------------------------------------------------------------------------
   enable_customer_managed_key = true
   key_vault_id                = module.vault.id
