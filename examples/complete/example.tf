@@ -62,7 +62,7 @@ module "subnet" {
 # ------------------------------------------------------------------------------
 module "vault" {
   source                        = "terraform-az-modules/key-vault/azurerm"
-  version                       = "3.0.0"
+  version                       = "3.1.0"
   name                          = "core4"
   environment                   = "dev"
   label_order                   = ["name", "environment", "location"]
