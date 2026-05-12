@@ -106,7 +106,7 @@ module "log-analytics" {
 ##-----------------------------------------------------------------------------
 module "private_dns" {
   source              = "terraform-az-modules/private-dns/azurerm"
-  version             = "1.0.6"
+  version             = "1.0.7"
   name                = "core"
   environment         = "dev"
   location            = module.resource_group.resource_group_location
